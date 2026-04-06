@@ -1,0 +1,331 @@
+/* Use font for headers, titles, and text meant to pop out */
+@font-face {
+    font-family: 'Etna';
+    src: url(./assets/font/etna-free-font.otf) format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* Use font for longer pieces of text */
+@font-face {
+    font-family: 'IBMPlexSans_Condensed';
+    src: url(./assets/font/IBMPlexSans_Condensed-Regular.ttf) format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+  
+:root {
+    --primary-color: #4D647F;
+    --primary-light:rgb(101, 152, 209);
+    --secondary-color: #e51937;
+    --secondary-deep: #b8142c;
+    --secondary-soft: rgba(229, 25, 55, 0.22);
+    --secondary-softer: rgba(229, 25, 55, 0.1);
+    --dark-color:rgb(50, 71, 94);
+    --text-color: #ffffff;
+    --text-highlight-color: #e51937;
+    --background-color:rgb(49, 66, 87);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+html {
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: 'IBMPlexSans_Condensed', system-ui, sans-serif;
+    font-size: 1.125rem;
+    line-height: 1.45;
+    color: var(--text-color);
+    background-color: var(--background-color);
+    background-image: url("./assets/image/MCS Background.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 1.25rem 1rem 6.75rem;
+    margin: 0 auto;
+}
+
+.panel {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    text-align: center;
+    gap: 1rem;
+}
+
+#setup-screen {
+    margin-bottom: clamp(2.5rem, 8vw, 5rem);
+    padding-bottom: 0.25rem;
+}
+
+.panel--game {
+    justify-content: flex-start;
+    padding-top: 0.5rem;
+    padding-bottom: 2rem;
+}
+
+#reveal-section,
+#timer-section {
+    margin-bottom: 1.25rem;
+}
+
+.logo-link {
+    display: inline-block;
+    border-radius: 0.75rem;
+    line-height: 0;
+}
+
+.logo {
+    display: block;
+    max-width: min(100%, 280px);
+    height: auto;
+    border-radius: 0.75rem;
+}
+
+.title {
+    font-family: 'Etna', 'IBMPlexSans_Condensed', sans-serif;
+    font-size: clamp(1.75rem, 5vw, 2.25rem);
+    font-weight: normal;
+    margin: 0.25rem 0 0;
+}
+
+.title-highlight {
+    color: var(--text-highlight-color);
+}
+
+.lede {
+    margin: 0 0 0.5rem;
+    max-width: 32rem;
+}
+
+.field {
+    width: 100%;
+    max-width: 22rem;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+}
+
+.label {
+    text-align: left;
+    font-size: 1rem;
+}
+
+.input {
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.65rem 0.85rem;
+    font: inherit;
+    color: var(--text-color);
+    background-color: var(--dark-color);
+    border: 2px solid var(--primary-color);
+    border-radius: 0.75rem;
+}
+
+.input:focus {
+    outline: 3px solid var(--primary-light);
+    outline-offset: 2px;
+}
+
+.input-num {
+    text-align: center;
+}
+
+.select-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.select-wrap::after {
+    content: "▾";
+    position: absolute;
+    right: 0.9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text-color);
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.input-select {
+    cursor: pointer;
+    appearance: none;
+    padding-right: 2.5rem;
+}
+
+.error {
+    margin: 0;
+    color: var(--text-highlight-color);
+    font-weight: bold;
+}
+
+.btn {
+    min-height: 3.25rem;
+    min-width: 12rem;
+    padding: 0.75rem 1.5rem;
+    font: inherit;
+    font-family: 'Etna', 'IBMPlexSans_Condensed', sans-serif;
+    font-size: 1.15rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 0.85rem;
+}
+
+.btn-primary {
+    color: var(--text-color);
+    background-color: var(--secondary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--secondary-deep);
+}
+
+.btn-primary:focus {
+    outline: 3px solid var(--primary-light);
+    outline-offset: 3px;
+}
+
+.game-meta {
+    margin: 0 0 0.75rem;
+    font-family: 'Etna', sans-serif;
+    font-size: 1.35rem;
+}
+
+.card {
+    width: 100%;
+    max-width: 22rem;
+    min-height: clamp(16rem, 52vh, 34rem);
+    padding: clamp(1.75rem, 4vh, 2.5rem) 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    text-align: center;
+    color: var(--text-color);
+    background-color: var(--dark-color);
+    border: 3px solid var(--primary-light);
+    border-radius: 1rem;
+    cursor: pointer;
+}
+
+.card:focus {
+    outline: 3px solid var(--primary-light);
+    outline-offset: 4px;
+}
+
+.card__hint {
+    font-family: 'Etna', sans-serif;
+    font-size: 1.2rem;
+}
+
+.card__secret {
+    font-family: 'Etna', sans-serif;
+    font-size: clamp(1.35rem, 4vw, 1.85rem);
+    line-height: 1.25;
+}
+
+.timer-label {
+    margin: 1.5rem 0 0.25rem;
+    font-size: 1.1rem;
+}
+
+.timer-display {
+    margin: 0;
+    font-family: 'Etna', sans-serif;
+    font-size: clamp(2.5rem, 10vw, 3.5rem);
+    letter-spacing: 0.05em;
+    color: var(--primary-light);
+}
+
+.timer-display--done {
+    color: var(--secondary-color);
+    font-size: clamp(1.75rem, 7vw, 2.75rem);
+    letter-spacing: 0.02em;
+}
+
+.timer-back {
+    margin-top: 1.25rem;
+}
+
+.site-footer {
+    border-radius: 1.1rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: var(--background-color);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+    margin-top: clamp(1.25rem, 3.5vw, 2.75rem);
+    margin-left: clamp(0.65rem, 2vw, 1.25rem);
+    margin-right: clamp(0.65rem, 2vw, 1.25rem);
+    margin-bottom: clamp(0rem, 0vw, 2rem);
+    padding: 1.25rem 1rem 1.25rem;
+}
+
+.footer-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.socials {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.footer-social-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.04);
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.footer-social-link:hover {
+    background: rgba(229, 25, 55, 0.25);
+    border-color: rgba(229, 25, 55, 0.65);
+    transform: translateY(-2px);
+}
+
+.footer-social-img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    display: block;
+}
+
+@media (min-width: 480px) {
+    .page {
+        max-width: 28rem;
+    }
+}

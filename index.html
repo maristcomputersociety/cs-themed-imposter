@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCS CS Themed Imposter</title>
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+    <div class="page">
+        <main class="panel" id="setup-screen" aria-label="Game setup">
+            <a class="logo-link" href="https://www.marist.edu/clubs/marist-computer-society" target="_blank" rel="noopener noreferrer">
+                <img class="logo" src="./assets/image/MCS%202026%20Logo%20Transparent.png" width="280" height="auto" alt="Marist Computer Society">
+            </a>
+            <h1 class="title">CS-Themed <span class="title-highlight">Imposter</span></h1>
+            <p class="lede">
+                Everyone except the imposter sees the same secret computer science term. Take turns giving a related clue—without revealing the word too obviously. When time runs out, discuss and vote on who the imposter is. This version is pass-and-play on one device.
+            </p>
+            <div class="field">
+                <label class="label" for="num-players">Number of players</label>
+                <input class="input input-num" type="number" id="num-players" name="num-players" min="2" max="32" value="4" inputmode="numeric">
+            </div>
+            <div class="field">
+                <label class="label" for="num-imposters">Number of imposters</label>
+                <input class="input input-num" type="number" id="num-imposters" name="num-imposters" min="1" max="16" value="1" inputmode="numeric">
+            </div>
+            <div class="field">
+                <label class="label" for="wordset">Wordset</label>
+                <div class="select-wrap">
+                    <select class="input input-select" id="wordset" name="wordset">
+                        <option value="cs100">CS 100 — Introductory</option>
+                        <option value="cs200">CS 200 — Intermediate</option>
+                        <option value="cs300">CS 300 — Advanced</option>
+                        <option value="cs400">CS 400 — Expert</option>
+                    </select>
+                </div>
+            </div>
+            <div class="field">
+                <label class="label" for="round-minutes">Round time (minutes)</label>
+                <input class="input input-num" type="number" id="round-minutes" name="round-minutes" min="1" max="10" value="2" inputmode="numeric">
+            </div>
+            <p class="error" id="setup-error" role="alert" hidden></p>
+            <button type="button" class="btn btn-primary" id="btn-start">Start game</button>
+        </main>
+
+        <main class="panel panel--game" id="game-screen" hidden aria-label="Game in progress">
+            <div id="reveal-section" hidden>
+                <p class="game-meta" id="player-label"></p>
+                <button type="button" class="card" id="role-card" aria-live="polite">
+                    <span class="card__hint" id="card-hint">Tap to reveal your role</span>
+                    <span class="card__secret" id="card-secret" hidden></span>
+                </button>
+            </div>
+            <div id="timer-section" hidden>
+                <p class="timer-label" id="timer-label">Time remaining</p>
+                <p class="timer-display" id="timer-display">00:00</p>
+                <button type="button" class="btn btn-primary timer-back" id="btn-back-setup">Back to start</button>
+            </div>
+        </main>
+
+        <footer class="site-footer">
+            <div class="container footer-wrap">
+              <div class="socials" aria-label="Social and club links">
+                <a href="https://github.com/maristcomputersociety" class="footer-social-link" aria-label="GitHub" title="GitHub" target="_blank">
+                  <img src="assets/image/social-github.svg" alt="" width="32" height="32" class="footer-social-img">
+                </a>
+                <a href="https://discord.com/invite/z2EZW4kHD8" class="footer-social-link" aria-label="Discord" title="Discord" target="_blank">
+                  <img src="assets/image/social-discord.svg" alt="" width="32" height="32" class="footer-social-img">
+                </a>
+                <a href="https://www.instagram.com/marist.computer.society/" class="footer-social-link" aria-label="Instagram" title="Instagram" target="_blank">
+                  <img src="assets/image/social-instagram.svg" alt="" width="32" height="32" class="footer-social-img">
+                </a>
+                <a href="https://docs.google.com/forms/d/e/1FAIpQLSeoSWoMBjzr_p6f7Brpdf7ZqSkhdpmiUjlIlD-6325rNnEg9A/viewform" class="footer-social-link" aria-label="Student email list" title="Student email list" target="_blank">
+                  <img src="assets/image/social-email.svg" alt="" width="32" height="32" class="footer-social-img">
+                </a>
+              </div>
+              <p>&copy; 2026 Marist Computer Society. All rights reserved.</p>
+            </div>
+          </footer>
+    </div>
+    <script type="module" src="./app.js"></script>
+</body>
+</html>
