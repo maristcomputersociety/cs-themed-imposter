@@ -265,7 +265,7 @@ btnStart.addEventListener('click', async function () {
         });
     } else {
         game.imposterIndices.forEach(function (playerIndex) {
-            game.imposterWordsByPlayer[playerIndex] = game.secretWord;
+            game.imposterWordsByPlayer[playerIndex] = 'Imposter';
         });
     }
     game.currentPlayer = 0;
