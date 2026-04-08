@@ -9,6 +9,7 @@ const numPlayersInput = document.getElementById('num-players');
 const numImpostersInput = document.getElementById('num-imposters');
 const wordsetSelect = document.getElementById('wordset');
 const roundMinutesInput = document.getElementById('round-minutes');
+const unknownImposterToggle = document.getElementById('unknown-imposter-toggle');
 const setupError = document.getElementById('setup-error');
 const btnStart = document.getElementById('btn-start');
 
@@ -22,9 +23,10 @@ const timerDisplay = document.getElementById('timer-display');
 const timerLabel = document.getElementById('timer-label');
 const btnBackSetup = document.getElementById('btn-back-setup');
 
-/** @type {{ secretWord: string, imposterIndices: number[], currentPlayer: number, revealed: boolean, roundEndMs: number, timerId: number | null }} */
+/** @type {{ secretWord: string, imposterWordsByPlayer: Record<number, string>, imposterIndices: number[], currentPlayer: number, revealed: boolean, roundEndMs: number, timerId: number | null }} */
 let game = {
     secretWord: '',
+    imposterWordsByPlayer: {},
     imposterIndices: [],
     currentPlayer: 0,
     revealed: false,
@@ -91,7 +93,33 @@ function parseSetup() {
         numImposters: imp,
         roundMinutes: minutes,
         wordsetId: wordsetSelect.value,
+        unknownImposterMode: unknownImposterToggle.checked,
     };
+}
+
+function pickRandomWord(words) {
+    return words[Math.floor(Math.random() * words.length)];
+}
+
+function pickDifferentWord(words, secretWord) {
+    if (words.length <= 1) return secretWord;
+    const alternatives = words.filter(function (w) {
+        return w !== secretWord;
+    });
+    if (alternatives.length === 0) return secretWord;
+    return pickRandomWord(alternatives);
+}
+
+function pickDistinctImposterWords(words, secretWord, count) {
+    const uniqueAlternatives = Array.from(
+        new Set(
+            words.filter(function (w) {
+                return w !== secretWord;
+            })
+        )
+    );
+    if (uniqueAlternatives.length < count) return null;
+    return shuffle(uniqueAlternatives).slice(0, count);
 }
 
 async function loadWordset(id) {
@@ -124,7 +152,9 @@ function revealCurrent() {
     const isImposter = game.imposterIndices.indexOf(game.currentPlayer) !== -1;
     cardHint.hidden = true;
     cardSecret.hidden = false;
-    cardSecret.textContent = isImposter ? 'Imposter' : game.secretWord;
+    cardSecret.textContent = isImposter
+        ? game.imposterWordsByPlayer[game.currentPlayer] || game.secretWord
+        : game.secretWord;
     game.revealed = true;
     roleCard.setAttribute('aria-pressed', 'true');
 }
@@ -218,8 +248,26 @@ btnStart.addEventListener('click', async function () {
         return;
     }
 
-    game.secretWord = words[Math.floor(Math.random() * words.length)];
+    game.secretWord = pickRandomWord(words);
     game.imposterIndices = pickImposterIndices(cfg.numPlayers, cfg.numImposters);
+    game.imposterWordsByPlayer = {};
+
+    if (cfg.unknownImposterMode) {
+        const uniqueImposterWords = pickDistinctImposterWords(words, game.secretWord, cfg.numImposters);
+        if (!uniqueImposterWords) {
+            showSetupError(
+                'This wordset does not have enough unique words for unknown imposter mode with the selected number of imposters.'
+            );
+            return;
+        }
+        game.imposterIndices.forEach(function (playerIndex, i) {
+            game.imposterWordsByPlayer[playerIndex] = uniqueImposterWords[i];
+        });
+    } else {
+        game.imposterIndices.forEach(function (playerIndex) {
+            game.imposterWordsByPlayer[playerIndex] = game.secretWord;
+        });
+    }
     game.currentPlayer = 0;
     game.revealed = false;
 

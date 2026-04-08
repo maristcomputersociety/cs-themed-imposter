@@ -183,6 +183,24 @@ body {
     font-weight: bold;
 }
 
+.toggle-field {
+    width: 100%;
+    max-width: 22rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.65rem;
+    font-size: 1rem;
+    text-align: left;
+}
+
+.toggle-field input[type="checkbox"] {
+    width: 1.2rem;
+    height: 1.2rem;
+    accent-color: var(--secondary-color);
+    flex-shrink: 0;
+}
+
 .btn {
     min-height: 3.25rem;
     min-width: 12rem;

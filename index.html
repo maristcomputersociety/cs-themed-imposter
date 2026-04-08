@@ -39,6 +39,10 @@
                 <label class="label" for="round-minutes">Round time (minutes)</label>
                 <input class="input input-num" type="number" id="round-minutes" name="round-minutes" min="1" max="10" value="2" inputmode="numeric">
             </div>
+            <label class="toggle-field" for="unknown-imposter-toggle">
+                <input type="checkbox" id="unknown-imposter-toggle" name="unknown-imposter-toggle">
+                <strong>Unknown imposter mode</strong> Imposters don't realize they are imposters, given a different word than the other players
+            </label>
             <p class="error" id="setup-error" role="alert" hidden></p>
             <button type="button" class="btn btn-primary" id="btn-start">Start game</button>
         </main>
