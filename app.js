@@ -101,25 +101,20 @@ function pickRandomWord(words) {
     return words[Math.floor(Math.random() * words.length)];
 }
 
-function pickDifferentWord(words, secretWord) {
-    if (words.length <= 1) return secretWord;
+/**
+ * Each imposter gets an independent random pick from words that are not the
+ * civilian secret. Repeats across imposters are allowed when the wordset is small.
+ */
+function pickRandomImposterWords(words, secretWord, count) {
     const alternatives = words.filter(function (w) {
         return w !== secretWord;
     });
-    if (alternatives.length === 0) return secretWord;
-    return pickRandomWord(alternatives);
-}
-
-function pickDistinctImposterWords(words, secretWord, count) {
-    const uniqueAlternatives = Array.from(
-        new Set(
-            words.filter(function (w) {
-                return w !== secretWord;
-            })
-        )
-    );
-    if (uniqueAlternatives.length < count) return null;
-    return shuffle(uniqueAlternatives).slice(0, count);
+    if (alternatives.length === 0) return null;
+    const result = [];
+    for (let i = 0; i < count; i++) {
+        result.push(pickRandomWord(alternatives));
+    }
+    return result;
 }
 
 async function loadWordset(id) {
@@ -253,15 +248,15 @@ btnStart.addEventListener('click', async function () {
     game.imposterWordsByPlayer = {};
 
     if (cfg.unknownImposterMode) {
-        const uniqueImposterWords = pickDistinctImposterWords(words, game.secretWord, cfg.numImposters);
-        if (!uniqueImposterWords) {
+        const imposterWords = pickRandomImposterWords(words, game.secretWord, cfg.numImposters);
+        if (!imposterWords) {
             showSetupError(
-                'This wordset does not have enough unique words for unknown imposter mode with the selected number of imposters.'
+                'Unknown imposter mode needs at least one word in the wordset that is different from the secret word.'
             );
             return;
         }
         game.imposterIndices.forEach(function (playerIndex, i) {
-            game.imposterWordsByPlayer[playerIndex] = uniqueImposterWords[i];
+            game.imposterWordsByPlayer[playerIndex] = imposterWords[i];
         });
     } else {
         game.imposterIndices.forEach(function (playerIndex) {
