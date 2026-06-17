@@ -23,7 +23,7 @@ const timerDisplay = document.getElementById('timer-display');
 const timerLabel = document.getElementById('timer-label');
 const btnBackSetup = document.getElementById('btn-back-setup');
 
-/** @type {{ secretWord: string, imposterWordsByPlayer: Record<number, string>, imposterIndices: number[], currentPlayer: number, revealed: boolean, roundEndMs: number, timerId: number | null, revealCooldownEndMs: number }} */
+/** @type {{ secretWord: string, imposterWordsByPlayer: Record<number, string>, imposterIndices: number[], currentPlayer: number, revealed: boolean, roundEndMs: number, timerId: number | null, revealCooldownEndMs: number, tapRevealCooldownEndMs: number }} */
 let game = {
     secretWord: '',
     imposterWordsByPlayer: {},
@@ -33,6 +33,7 @@ let game = {
     roundEndMs: 0,
     timerId: null,
     revealCooldownEndMs: 0,
+    tapRevealCooldownEndMs: 0,
 };
 
 function maxImpostersForPlayers(n) {
@@ -141,6 +142,12 @@ function pickImposterIndices(numPlayers, count) {
 
 const cooldownFill = document.querySelector('.card__cooldown-fill');
 
+function resetCooldownState() {
+    game.revealCooldownEndMs = 0;
+    game.tapRevealCooldownEndMs = 0;
+    resetRevealCooldownBar();
+}
+
 function showCardForCurrentPlayer() {
     const n = parseInt(numPlayersInput.value, 10);
     game.revealed = false;
@@ -149,7 +156,7 @@ function showCardForCurrentPlayer() {
     cardSecret.hidden = true;
     cardSecret.textContent = '';
     roleCard.setAttribute('aria-pressed', 'false');
-    resetRevealCooldownBar();
+    resetCooldownState();
 }
 
 function setRevealCooldownBar(percent) {
@@ -250,6 +257,15 @@ function startRevealCooldown() {
     game.revealCooldownEndMs = Date.now() + cooldownMs;
 }
 
+function isTapRevealCooldownActive() {
+    return Date.now() < game.tapRevealCooldownEndMs;
+}
+
+function startTapRevealCooldown() {
+    const cooldownMs = 500;
+    game.tapRevealCooldownEndMs = Date.now() + cooldownMs;
+}
+
 function advanceOrFinish() {
     const n = parseInt(numPlayersInput.value, 10);
     game.currentPlayer += 1;
@@ -265,8 +281,12 @@ roleCard.addEventListener('click', function () {
     if (isRevealCooldownActive()) {
         return;
     }
+    if (isTapRevealCooldownActive()) {
+        return;
+    }
     if (!game.revealed) {
         revealCurrent();
+        startTapRevealCooldown();
         startRevealCooldown();
         return;
     }
