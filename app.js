@@ -23,7 +23,7 @@ const timerDisplay = document.getElementById('timer-display');
 const timerLabel = document.getElementById('timer-label');
 const btnBackSetup = document.getElementById('btn-back-setup');
 
-/** @type {{ secretWord: string, imposterWordsByPlayer: Record<number, string>, imposterIndices: number[], currentPlayer: number, revealed: boolean, roundEndMs: number, timerId: number | null }} */
+/** @type {{ secretWord: string, imposterWordsByPlayer: Record<number, string>, imposterIndices: number[], currentPlayer: number, revealed: boolean, roundEndMs: number, timerId: number | null, revealCooldownEndMs: number }} */
 let game = {
     secretWord: '',
     imposterWordsByPlayer: {},
@@ -32,6 +32,7 @@ let game = {
     revealed: false,
     roundEndMs: 0,
     timerId: null,
+    revealCooldownEndMs: 0,
 };
 
 function maxImpostersForPlayers(n) {
@@ -138,6 +139,8 @@ function pickImposterIndices(numPlayers, count) {
     });
 }
 
+const cooldownFill = document.querySelector('.card__cooldown-fill');
+
 function showCardForCurrentPlayer() {
     const n = parseInt(numPlayersInput.value, 10);
     game.revealed = false;
@@ -146,6 +149,31 @@ function showCardForCurrentPlayer() {
     cardSecret.hidden = true;
     cardSecret.textContent = '';
     roleCard.setAttribute('aria-pressed', 'false');
+    resetRevealCooldownBar();
+}
+
+function setRevealCooldownBar(percent) {
+    if (!cooldownFill) return;
+    cooldownFill.style.width = percent + '%';
+}
+
+function resetRevealCooldownBar() {
+    if (!cooldownFill) return;
+    cooldownFill.style.transition = 'none';
+    setRevealCooldownBar(0);
+    cooldownFill.getBoundingClientRect();
+    cooldownFill.style.transition = 'width 500ms linear';
+}
+
+function startRevealCooldownBar() {
+    if (!cooldownFill) return;
+    cooldownFill.style.transition = 'none';
+    setRevealCooldownBar(100);
+    cooldownFill.getBoundingClientRect();
+    cooldownFill.style.transition = 'width 500ms linear';
+    requestAnimationFrame(function () {
+        setRevealCooldownBar(0);
+    });
 }
 
 function revealCurrent() {
@@ -157,6 +185,7 @@ function revealCurrent() {
         : game.secretWord;
     game.revealed = true;
     roleCard.setAttribute('aria-pressed', 'true');
+    startRevealCooldownBar();
 }
 
 function stopRoundTimer() {
@@ -212,6 +241,15 @@ function resetToSetup() {
     game.revealed = false;
 }
 
+function isRevealCooldownActive() {
+    return Date.now() < game.revealCooldownEndMs;
+}
+
+function startRevealCooldown() {
+    const cooldownMs = 500;
+    game.revealCooldownEndMs = Date.now() + cooldownMs;
+}
+
 function advanceOrFinish() {
     const n = parseInt(numPlayersInput.value, 10);
     game.currentPlayer += 1;
@@ -224,8 +262,12 @@ function advanceOrFinish() {
 }
 
 roleCard.addEventListener('click', function () {
+    if (isRevealCooldownActive()) {
+        return;
+    }
     if (!game.revealed) {
         revealCurrent();
+        startRevealCooldown();
         return;
     }
     advanceOrFinish();

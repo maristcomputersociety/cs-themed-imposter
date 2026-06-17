@@ -234,6 +234,7 @@ body {
 }
 
 .card {
+    position: relative;
     width: 100%;
     max-width: 22rem;
     min-height: clamp(16rem, 52vh, 34rem);
@@ -254,6 +255,25 @@ body {
 .card:focus {
     outline: 3px solid var(--primary-light);
     outline-offset: 4px;
+}
+
+.card__cooldown-bar {
+    position: absolute;
+    left: 1.25rem;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    height: 0.35rem;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.card__cooldown-fill {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: 999px;
+    background-color: var(--secondary-color);
+    transition: width 500ms linear;
 }
 
 .card__hint {
