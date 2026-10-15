@@ -4,6 +4,9 @@ A static, pass-and-play web game based on **Imposter** where everyone except the
 
 The app is plain **HTML**, **CSS**, and a small **JavaScript** module. Word lists live as **JSON** files under `wordsets/` and are loaded at runtime with `fetch`, using paths relative to `app.js` so it works on **GitHub Pages** (including project URLs like `/your-repo/`) and local dev servers.
 
+### Github Pages Link
+https://maristcomputersociety.github.io/cs-themed-imposter/
+
 ## Running locally
 
 Opening `index.html` directly from disk often blocks loading JSON; use any static file server from the project root, for example:
