@@ -4,6 +4,8 @@ A static, pass-and-play web game based on **Imposter** where everyone except the
 
 The app is plain **HTML**, **CSS**, and a small **JavaScript** module. Word lists live as **JSON** files under `wordsets/` and are loaded at runtime with `fetch`, using paths relative to `app.js` so it works on **GitHub Pages** (including project URLs like `/your-repo/`) and local dev servers.
 
+Players can open **View / edit words** during setup to rename, add, or remove terms from the selected wordset. These edits are temporary until saved as a custom wordset. Built-in wordsets can be reset to their default words. Saved custom wordsets are stored in the current browser, shown in italics in the selector, and can be deleted from the editor; edits to built-in wordsets never modify the original JSON files.
+
 ### Github Pages Link
 https://maristcomputersociety.github.io/cs-themed-imposter/
 

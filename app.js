@@ -8,6 +8,15 @@ const gameScreen = document.getElementById('game-screen');
 const numPlayersInput = document.getElementById('num-players');
 const numImpostersInput = document.getElementById('num-imposters');
 const wordsetSelect = document.getElementById('wordset');
+const btnEditWords = document.getElementById('btn-edit-words');
+const wordEditorContent = document.getElementById('word-editor-content');
+const wordList = document.getElementById('word-list');
+const wordAddForm = document.getElementById('word-add-form');
+const newWordInput = document.getElementById('new-word');
+const wordEditorError = document.getElementById('word-editor-error');
+const btnSaveWordset = document.getElementById('btn-save-wordset');
+const btnDeleteWordset = document.getElementById('btn-delete-wordset');
+const btnResetWordset = document.getElementById('btn-reset-wordset');
 const roundMinutesInput = document.getElementById('round-minutes');
 const unknownImposterToggle = document.getElementById('unknown-imposter-toggle');
 const setupError = document.getElementById('setup-error');
@@ -22,6 +31,12 @@ const cardSecret = document.getElementById('card-secret');
 const timerDisplay = document.getElementById('timer-display');
 const timerLabel = document.getElementById('timer-label');
 const btnBackSetup = document.getElementById('btn-back-setup');
+
+const wordsets = new Map();
+const wordsetLoads = new Map();
+const CUSTOM_WORDSETS_STORAGE_KEY = 'cs-themed-imposter.custom-wordsets';
+let savedCustomWordsets = [];
+let customWordsetStorageError = '';
 
 /** @type {{ secretWord: string, imposterWordsByPlayer: Record<number, string>, imposterIndices: number[], currentPlayer: number, revealed: boolean, roundEndMs: number, timerId: number | null, revealCooldownEndMs: number, tapRevealCooldownEndMs: number }} */
 let game = {
@@ -131,6 +146,307 @@ async function loadWordset(id) {
     const data = await res.json();
     if (!Array.isArray(data) || data.length === 0) throw new Error('Invalid word list.');
     return data.map(String);
+}
+
+function getWordsetState(id) {
+    return wordsets.get(id);
+}
+
+function updateWordsetLabel(id) {
+    const option = Array.from(wordsetSelect.options).find(function (item) {
+        return item.value === id;
+    });
+    const state = getWordsetState(id);
+    if (!option) return;
+    const isCustom = option.dataset.custom === 'true';
+    btnDeleteWordset.hidden = !isCustom;
+    btnResetWordset.hidden = isCustom;
+    btnSaveWordset.textContent = isCustom ? 'Save changes' : 'Save as custom wordset';
+    if (!state) {
+        btnSaveWordset.disabled = true;
+        btnResetWordset.disabled = true;
+        return;
+    }
+    const edited = wordsHaveChanged(state);
+    const baseLabel = option.dataset.originalLabel || option.label;
+    option.textContent = baseLabel + (edited ? ' *' : '');
+    option.style.fontStyle = isCustom ? 'italic' : '';
+    btnSaveWordset.disabled = !edited;
+    btnResetWordset.disabled = !edited;
+}
+
+function showWordEditorError(message) {
+    wordEditorError.textContent = message;
+    wordEditorError.hidden = false;
+}
+
+function clearWordEditorError() {
+    wordEditorError.textContent = '';
+    wordEditorError.hidden = true;
+}
+
+function wordsHaveChanged(state) {
+    return state.words.length !== state.originalWords.length
+        || state.words.some(function (word, index) {
+            return word !== state.originalWords[index];
+        });
+}
+
+function readSavedCustomWordsets() {
+    const serialized = window.localStorage.getItem(CUSTOM_WORDSETS_STORAGE_KEY);
+    if (!serialized) return [];
+    const customWordsets = JSON.parse(serialized);
+    if (!Array.isArray(customWordsets) || customWordsets.some(function (item) {
+        return !item
+            || typeof item.id !== 'string'
+            || !item.id.startsWith('custom-')
+            || typeof item.name !== 'string'
+            || !item.name.trim()
+            || !Array.isArray(item.words)
+            || item.words.length === 0
+            || item.words.some(function (word) {
+                return typeof word !== 'string' || !word.trim();
+            });
+    })) {
+        throw new Error('Saved custom wordsets have an invalid format.');
+    }
+    const ids = new Set();
+    const names = new Set();
+    customWordsets.forEach(function (item) {
+        const normalizedName = item.name.trim().toLowerCase();
+        if (ids.has(item.id) || names.has(normalizedName)) {
+            throw new Error('Saved custom wordsets contain duplicate entries.');
+        }
+        ids.add(item.id);
+        names.add(normalizedName);
+    });
+    return customWordsets;
+}
+
+function addCustomWordsetOption(customWordset) {
+    let option = Array.from(wordsetSelect.options).find(function (item) {
+        return item.value === customWordset.id;
+    });
+    if (!option) {
+        option = document.createElement('option');
+        option.value = customWordset.id;
+        wordsetSelect.append(option);
+    }
+    option.textContent = customWordset.name;
+    option.dataset.originalLabel = customWordset.name;
+    option.dataset.custom = 'true';
+    option.style.fontStyle = 'italic';
+}
+
+function persistCustomWordsets() {
+    try {
+        window.localStorage.setItem(CUSTOM_WORDSETS_STORAGE_KEY, JSON.stringify(savedCustomWordsets));
+        customWordsetStorageError = '';
+        return true;
+    } catch (error) {
+        showWordEditorError('Could not save this custom wordset in this browser. Check available storage and try again.');
+        return false;
+    }
+}
+
+function saveSelectedWordset() {
+    const id = wordsetSelect.value;
+    const state = getWordsetState(id);
+    if (!state || !wordsHaveChanged(state)) return;
+    if (state.words.length === 0 || state.words.some(function (word) { return !word.trim(); })) {
+        showWordEditorError('Remove empty words or add at least one word before saving.');
+        return;
+    }
+    if (customWordsetStorageError) {
+        showWordEditorError(customWordsetStorageError);
+        return;
+    }
+
+    const selectedOption = wordsetSelect.options[wordsetSelect.selectedIndex];
+    const currentSaved = selectedOption.dataset.custom === 'true'
+        ? savedCustomWordsets.find(function (item) { return item.id === id; })
+        : null;
+    const enteredName = window.prompt(
+        currentSaved ? 'Name this custom wordset:' : 'Name your custom wordset:',
+        currentSaved ? currentSaved.name : ''
+    );
+    if (enteredName === null) return;
+    const name = enteredName.trim();
+    if (!name) {
+        showWordEditorError('Enter a name for the custom wordset.');
+        return;
+    }
+    const matchesBuiltInName = Array.from(wordsetSelect.options).some(function (option) {
+        return option.dataset.custom !== 'true'
+            && (option.dataset.originalLabel || option.textContent).trim().toLowerCase() === name.toLowerCase();
+    });
+    if (matchesBuiltInName) {
+        showWordEditorError('Choose a name that is different from the built-in wordsets.');
+        return;
+    }
+    const duplicateName = savedCustomWordsets.some(function (item) {
+        return item.id !== id && item.name.toLowerCase() === name.toLowerCase();
+    });
+    if (duplicateName) {
+        showWordEditorError('A custom wordset with that name already exists.');
+        return;
+    }
+
+    let customId = id;
+    if (!currentSaved) {
+        do {
+            customId = 'custom-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+        } while (savedCustomWordsets.some(function (item) { return item.id === customId; }));
+    }
+    const customWordset = { id: customId, name: name, words: state.words.slice() };
+    const previousSaved = savedCustomWordsets;
+    savedCustomWordsets = currentSaved
+        ? savedCustomWordsets.map(function (item) {
+            return item.id === id ? customWordset : item;
+        })
+        : savedCustomWordsets.concat(customWordset);
+    if (!persistCustomWordsets()) {
+        savedCustomWordsets = previousSaved;
+        return;
+    }
+
+    if (!currentSaved) {
+        state.words = state.originalWords.slice();
+        updateWordsetLabel(id);
+    }
+
+    const customState = { originalWords: customWordset.words.slice(), words: customWordset.words.slice() };
+    wordsets.set(customId, customState);
+    addCustomWordsetOption(customWordset);
+    wordsetSelect.value = customId;
+    updateWordsetLabel(customId);
+    clearWordEditorError();
+    renderWordList(customId);
+}
+
+function deleteSelectedCustomWordset() {
+    const id = wordsetSelect.value;
+    const option = wordsetSelect.options[wordsetSelect.selectedIndex];
+    if (!option || option.dataset.custom !== 'true') return;
+
+    const savedWordset = savedCustomWordsets.find(function (item) { return item.id === id; });
+    if (!savedWordset) {
+        showWordEditorError('Could not find this saved custom wordset.');
+        return;
+    }
+    if (!window.confirm('Are you sure you want to delete the custom wordset "' + savedWordset.name + '"?')) return;
+
+    const previousSaved = savedCustomWordsets;
+    savedCustomWordsets = savedCustomWordsets.filter(function (item) { return item.id !== id; });
+    if (!persistCustomWordsets()) {
+        savedCustomWordsets = previousSaved;
+        return;
+    }
+
+    option.remove();
+    wordsets.delete(id);
+    const firstBuiltInOption = Array.from(wordsetSelect.options).find(function (item) {
+        return item.dataset.custom !== 'true';
+    });
+    if (firstBuiltInOption) wordsetSelect.value = firstBuiltInOption.value;
+    updateWordsetLabel(wordsetSelect.value);
+    clearWordEditorError();
+    if (!wordEditorContent.hidden) renderSelectedWordset();
+}
+
+function resetSelectedWordset() {
+    const id = wordsetSelect.value;
+    const option = wordsetSelect.options[wordsetSelect.selectedIndex];
+    const state = getWordsetState(id);
+    if (!option || option.dataset.custom === 'true' || !state || !wordsHaveChanged(state)) return;
+    if (!window.confirm('Reset "' + (option.dataset.originalLabel || option.textContent) + '" to its default words?')) return;
+
+    state.words = state.originalWords.slice();
+    renderWordList(id);
+    updateWordsetLabel(id);
+    clearWordEditorError();
+}
+
+function renderWordList(id) {
+    const state = getWordsetState(id);
+    if (!state) return;
+    wordList.replaceChildren();
+    state.words.forEach(function (word, index) {
+        const item = document.createElement('li');
+        item.className = 'word-list__item';
+
+        const input = document.createElement('input');
+        input.className = 'input';
+        input.type = 'text';
+        input.value = word;
+        input.setAttribute('aria-label', 'Word ' + (index + 1));
+        input.addEventListener('input', function () {
+            state.words[index] = input.value;
+            updateWordsetLabel(id);
+            clearWordEditorError();
+        });
+
+        const removeButton = document.createElement('button');
+        removeButton.className = 'word-list__remove';
+        removeButton.type = 'button';
+        removeButton.textContent = 'Remove';
+        removeButton.setAttribute('aria-label', 'Remove word ' + (index + 1));
+        removeButton.addEventListener('click', function () {
+            if (!window.confirm('Are you sure you want to remove "' + state.words[index] + '"?')) return;
+            state.words.splice(index, 1);
+            renderWordList(id);
+            updateWordsetLabel(id);
+            clearWordEditorError();
+        });
+
+        item.append(input, removeButton);
+        wordList.append(item);
+    });
+}
+
+async function loadWordsetForEditing(id) {
+    let state = getWordsetState(id);
+    if (state) return state;
+
+    const customWordset = savedCustomWordsets.find(function (item) { return item.id === id; });
+    if (customWordset) {
+        state = { originalWords: customWordset.words.slice(), words: customWordset.words.slice() };
+        wordsets.set(id, state);
+        return state;
+    }
+
+    let loading = wordsetLoads.get(id);
+    if (!loading) {
+        loading = loadWordset(id).then(function (words) {
+            const loadedState = { originalWords: words.slice(), words: words.slice() };
+            wordsets.set(id, loadedState);
+            return loadedState;
+        });
+        wordsetLoads.set(id, loading);
+    }
+    try {
+        state = await loading;
+    } finally {
+        wordsetLoads.delete(id);
+    }
+    return state;
+}
+
+async function renderSelectedWordset() {
+    const id = wordsetSelect.value;
+    clearWordEditorError();
+    if (customWordsetStorageError) showWordEditorError(customWordsetStorageError);
+    wordList.replaceChildren();
+    try {
+        await loadWordsetForEditing(id);
+        if (wordEditorContent.hidden || wordsetSelect.value !== id) return;
+        renderWordList(id);
+        updateWordsetLabel(id);
+    } catch (error) {
+        if (wordsetSelect.value === id) {
+            showWordEditorError('Could not load this wordset. Please try again.');
+        }
+    }
 }
 
 function pickImposterIndices(numPlayers, count) {
@@ -295,6 +611,56 @@ roleCard.addEventListener('click', function () {
 
 numPlayersInput.addEventListener('input', clampImposterInput);
 
+Array.from(wordsetSelect.options).forEach(function (option) {
+    option.dataset.originalLabel = option.textContent;
+});
+
+try {
+    savedCustomWordsets = readSavedCustomWordsets();
+    savedCustomWordsets.forEach(addCustomWordsetOption);
+} catch (error) {
+    customWordsetStorageError = 'Could not load saved custom wordsets from this browser. They may be unavailable or corrupted.';
+}
+
+btnSaveWordset.addEventListener('click', saveSelectedWordset);
+btnDeleteWordset.addEventListener('click', deleteSelectedCustomWordset);
+btnResetWordset.addEventListener('click', resetSelectedWordset);
+
+btnEditWords.addEventListener('click', function () {
+    wordEditorContent.hidden = !wordEditorContent.hidden;
+    btnEditWords.setAttribute('aria-expanded', String(!wordEditorContent.hidden));
+    btnEditWords.textContent = wordEditorContent.hidden ? 'View / edit words' : 'Hide word editor';
+    if (!wordEditorContent.hidden) renderSelectedWordset();
+});
+
+wordsetSelect.addEventListener('change', function () {
+    if (!wordEditorContent.hidden) renderSelectedWordset();
+});
+
+wordAddForm.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    const id = wordsetSelect.value;
+    const word = newWordInput.value.trim();
+    clearWordEditorError();
+    if (!word) {
+        showWordEditorError('Enter a word to add.');
+        newWordInput.focus();
+        return;
+    }
+    try {
+        const state = await loadWordsetForEditing(id);
+        if (wordsetSelect.value !== id) return;
+        state.words.push(word);
+        newWordInput.value = '';
+        renderWordList(id);
+        updateWordsetLabel(id);
+    } catch (error) {
+        if (wordsetSelect.value === id) {
+            showWordEditorError('Could not load this wordset. Please try again.');
+        }
+    }
+});
+
 btnStart.addEventListener('click', async function () {
     clearSetupError();
     const cfg = parseSetup();
@@ -302,11 +668,17 @@ btnStart.addEventListener('click', async function () {
 
     let words;
     try {
-        words = await loadWordset(cfg.wordsetId);
+        const state = await loadWordsetForEditing(cfg.wordsetId);
+        words = state.words.slice();
     } catch (e) {
         showSetupError(
             'Could not load word lists. If you opened this file directly, use a local server (Live Server) or deploy to GitHub Pages.'
         );
+        return;
+    }
+    if (wordsetSelect.value !== cfg.wordsetId) return;
+    if (words.length === 0 || words.some(function (word) { return !word.trim(); })) {
+        showSetupError('Remove empty words or add at least one word before starting.');
         return;
     }
 

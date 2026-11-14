@@ -38,9 +38,26 @@
                         <option value="applied_ai">Artificial Intelligence - Applied</option>
                         <option value="technical_ai">Artificial Intelligence - Technical</option>
                         <option value="marist_professors">Faculty</option>
+                        <option value="base">Template</option>
                     </select>
                 </div>
             </div>
+            <section class="word-editor" aria-label="Wordset editor">
+                <button type="button" class="btn btn-secondary" id="btn-edit-words" aria-expanded="false" aria-controls="word-editor-content">Wordset Editor</button>
+                <div id="word-editor-content" hidden>
+                    <p class="word-editor__description">Changes are temporary until you save them as a custom wordset. Original wordsets are never modified.</p>
+                    <ul class="word-list" id="word-list" aria-label="Words in selected wordset"></ul>
+                    <form class="word-editor__add" id="word-add-form">
+                        <label class="sr-only" for="new-word">New word</label>
+                        <input class="input" type="text" id="new-word" name="new-word" autocomplete="off" placeholder="Add a word">
+                        <button type="submit" class="btn btn-secondary">Add word</button>
+                    </form>
+                    <button type="button" class="btn btn-secondary word-editor__save" id="btn-save-wordset" disabled>Save as custom wordset</button>
+                    <button type="button" class="btn btn-secondary word-editor__delete" id="btn-delete-wordset" hidden>Delete custom wordset</button>
+                    <button type="button" class="btn btn-secondary word-editor__reset" id="btn-reset-wordset" hidden>Reset wordset</button>
+                    <p class="error" id="word-editor-error" role="alert" hidden></p>
+                </div>
+            </section>
             <div class="field">
                 <label class="label" for="round-minutes">Round time (minutes)</label>
                 <input class="input input-num" type="number" id="round-minutes" name="round-minutes" min="1" max="10" value="2" inputmode="numeric">
