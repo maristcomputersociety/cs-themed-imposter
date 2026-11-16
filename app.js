@@ -18,7 +18,10 @@ const btnSaveWordset = document.getElementById('btn-save-wordset');
 const btnDeleteWordset = document.getElementById('btn-delete-wordset');
 const btnResetWordset = document.getElementById('btn-reset-wordset');
 const roundMinutesInput = document.getElementById('round-minutes');
-const unknownImposterToggle = document.getElementById('unknown-imposter-toggle');
+const previousModeButton = document.getElementById('btn-previous-mode');
+const nextModeButton = document.getElementById('btn-next-mode');
+const modeName = document.getElementById('mode-name');
+const modeDescription = document.getElementById('mode-description');
 const setupError = document.getElementById('setup-error');
 const btnStart = document.getElementById('btn-start');
 
@@ -35,8 +38,21 @@ const btnBackSetup = document.getElementById('btn-back-setup');
 const wordsets = new Map();
 const wordsetLoads = new Map();
 const CUSTOM_WORDSETS_STORAGE_KEY = 'cs-themed-imposter.custom-wordsets';
+const gameModes = [
+    {
+        name: 'Normal Mode',
+        description: 'Imposters know they are imposters and see their role instead of the secret word.',
+        unknownImposter: false,
+    },
+    {
+        name: 'Unknown Imposter Mode',
+        description: 'Imposters do not know their role; they see a different secret word from the other players.',
+        unknownImposter: true,
+    },
+];
 let savedCustomWordsets = [];
 let customWordsetStorageError = '';
+let selectedModeIndex = 0;
 
 /** @type {{ secretWord: string, imposterWordsByPlayer: Record<number, string>, imposterIndices: number[], currentPlayer: number, revealed: boolean, roundEndMs: number, timerId: number | null, revealCooldownEndMs: number, tapRevealCooldownEndMs: number }} */
 let game = {
@@ -110,8 +126,16 @@ function parseSetup() {
         numImposters: imp,
         roundMinutes: minutes,
         wordsetId: wordsetSelect.value,
-        unknownImposterMode: unknownImposterToggle.checked,
+        unknownImposterMode: gameModes[selectedModeIndex].unknownImposter,
     };
+}
+
+function selectMode(direction) {
+    selectedModeIndex = (selectedModeIndex + direction + gameModes.length) % gameModes.length;
+    const mode = gameModes[selectedModeIndex];
+    modeName.textContent = mode.name;
+    modeDescription.textContent = mode.description;
+    clearSetupError();
 }
 
 function pickRandomWord(words) {
@@ -718,5 +742,13 @@ btnStart.addEventListener('click', async function () {
 });
 
 btnBackSetup.addEventListener('click', resetToSetup);
+
+previousModeButton.addEventListener('click', function () {
+    selectMode(-1);
+});
+
+nextModeButton.addEventListener('click', function () {
+    selectMode(1);
+});
 
 clampImposterInput();

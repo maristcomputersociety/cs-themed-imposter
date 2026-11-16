@@ -63,10 +63,17 @@
                 <label class="label" for="round-minutes">Round time (minutes)</label>
                 <input class="input input-num" type="number" id="round-minutes" name="round-minutes" min="1" max="10" value="2" inputmode="numeric">
             </div>
-            <label class="toggle-field" for="unknown-imposter-toggle">
-                <input type="checkbox" id="unknown-imposter-toggle" name="unknown-imposter-toggle">
-                <strong>Unknown imposter mode</strong> Imposters don't realize they are imposters, given a different word than the other players
-            </label>
+            <section class="mode-picker" aria-label="Game mode">
+                <p class="label mode-picker__label">Game mode</p>
+                <div class="mode-picker__carousel">
+                    <button type="button" class="mode-picker__arrow" id="btn-previous-mode" aria-label="Previous game mode">&larr;</button>
+                    <div class="mode-picker__content" aria-live="polite" aria-atomic="true">
+                        <h2 class="mode-picker__name" id="mode-name">Normal Mode</h2>
+                        <p class="mode-picker__description" id="mode-description">Imposters know they are imposters and see their role instead of the secret word.</p>
+                    </div>
+                    <button type="button" class="mode-picker__arrow" id="btn-next-mode" aria-label="Next game mode">&rarr;</button>
+                </div>
+            </section>
             <p class="error" id="setup-error" role="alert" hidden></p>
             <button type="button" class="btn btn-primary" id="btn-start">Start game</button>
         </main>
