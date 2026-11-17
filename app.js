@@ -7,6 +7,8 @@ const setupScreen = document.getElementById('setup-screen');
 const gameScreen = document.getElementById('game-screen');
 const numPlayersInput = document.getElementById('num-players');
 const numImpostersInput = document.getElementById('num-imposters');
+const hitmanCountField = document.getElementById('hitman-count-field');
+const hitmanCountInput = document.getElementById('num-hitmen');
 const wordsetSelect = document.getElementById('wordset');
 const btnEditWords = document.getElementById('btn-edit-words');
 const wordEditorContent = document.getElementById('word-editor-content');
@@ -71,12 +73,12 @@ const gameModes = [
     {
         id: 'hitman',
         name: 'Hitman',
-        description: 'A new player type "hitman" is introduced',
+        description: 'Hitmen are assigned a player to get voted off as the imposter. Hitmen may be civilians or imposters.',
         unknownImposter: false,
-        limits: { minPlayers: 4, maxPlayers: 32, minImposters: 2 },
+        limits: { minPlayers: 4, maxPlayers: 32, minImposters: 1 },
         getRevealDetails: function (details) {
-            if (!details.isImposter) return [];
-            return ['Your target is Player ' + details.otherImposterNumbers.join(', ') + '.'];
+            if (!details.isHitman) return [];
+            return ['You have the Hitman task. Try to get Player ' + details.hitmanTargetNumber + ' voted off as the imposter.'];
         },
     }
 ];
@@ -84,11 +86,13 @@ let savedCustomWordsets = [];
 let customWordsetStorageError = '';
 let selectedModeIndex = 0;
 
-/** @type {{ secretWord: string, imposterWordsByPlayer: Record<number, string>, imposterIndices: number[], playerNumbersByIndex: Record<number, number>, revealedCardCount: number, mode: (typeof gameModes)[number] | null, currentPlayer: number, revealed: boolean, roundEndMs: number, timerId: number | null, revealCooldownEndMs: number, tapRevealCooldownEndMs: number }} */
+/** @type {{ secretWord: string, imposterWordsByPlayer: Record<number, string>, imposterIndices: number[], hitmanIndices: number[], hitmanTargetsByPlayer: Record<number, number>, playerNumbersByIndex: Record<number, number>, revealedCardCount: number, mode: (typeof gameModes)[number] | null, currentPlayer: number, revealed: boolean, roundEndMs: number, timerId: number | null, revealCooldownEndMs: number, tapRevealCooldownEndMs: number }} */
 let game = {
     secretWord: '',
     imposterWordsByPlayer: {},
     imposterIndices: [],
+    hitmanIndices: [],
+    hitmanTargetsByPlayer: {},
     playerNumbersByIndex: {},
     revealedCardCount: 0,
     mode: null,
@@ -120,7 +124,8 @@ function shuffle(arr) {
 }
 
 function clampSetupInputs() {
-    const limits = gameModes[selectedModeIndex].limits;
+    const mode = gameModes[selectedModeIndex];
+    const limits = mode.limits;
     numPlayersInput.min = String(limits.minPlayers);
     numPlayersInput.max = String(limits.maxPlayers);
     let n = parseInt(numPlayersInput.value, 10);
@@ -136,6 +141,15 @@ function clampSetupInputs() {
     if (imp < limits.minImposters) imp = limits.minImposters;
     if (imp > maxI) imp = maxI;
     numImpostersInput.value = String(imp);
+
+    hitmanCountField.hidden = mode.id !== 'hitman';
+    const maxHitmen = Math.floor(n / 4);
+    hitmanCountInput.min = '1';
+    hitmanCountInput.max = String(maxHitmen);
+    let hitmanCount = parseInt(hitmanCountInput.value, 10);
+    if (Number.isNaN(hitmanCount)) hitmanCount = 1;
+    hitmanCount = Math.max(1, Math.min(maxHitmen, hitmanCount));
+    hitmanCountInput.value = String(hitmanCount);
 }
 
 function showSetupError(message) {
@@ -151,6 +165,7 @@ function clearSetupError() {
 function parseSetup() {
     const n = parseInt(numPlayersInput.value, 10);
     const imp = parseInt(numImpostersInput.value, 10);
+    const hitmanCount = parseInt(hitmanCountInput.value, 10);
     const minutes = parseInt(roundMinutesInput.value, 10);
     const mode = gameModes[selectedModeIndex];
     const limits = mode.limits;
@@ -164,6 +179,11 @@ function parseSetup() {
         showSetupError('Imposters must be between ' + limits.minImposters + ' and ' + maxI + ' for ' + n + ' players in ' + mode.name + '.');
         return null;
     }
+    const maxHitmen = Math.floor(n / 4);
+    if (mode.id === 'hitman' && (Number.isNaN(hitmanCount) || hitmanCount < 1 || hitmanCount > maxHitmen)) {
+        showSetupError('Number of Hitman must be between 1 and ' + maxHitmen + ' for ' + n + ' players.');
+        return null;
+    }
     if (Number.isNaN(minutes) || minutes < 1 || minutes > 10) {
         showSetupError('Round time must be between 1 and 10 minutes.');
         return null;
@@ -172,6 +192,7 @@ function parseSetup() {
     return {
         numPlayers: n,
         numImposters: imp,
+        numHitmen: mode.id === 'hitman' ? hitmanCount : 0,
         roundMinutes: minutes,
         wordsetId: wordsetSelect.value,
         mode: mode,
@@ -529,6 +550,19 @@ function pickImposterIndices(numPlayers, count) {
     });
 }
 
+function pickHitmanAssignments(numPlayers, count) {
+    const playerIndices = Array.from({ length: numPlayers }, function (_, index) { return index; });
+    const hitmanIndices = shuffle(playerIndices).slice(0, count);
+    const hitmanTargetsByPlayer = {};
+    hitmanIndices.forEach(function (hitmanIndex) {
+        const possibleTargets = playerIndices.filter(function (playerIndex) {
+            return playerIndex !== hitmanIndex;
+        });
+        hitmanTargetsByPlayer[hitmanIndex] = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
+    });
+    return { hitmanIndices: hitmanIndices, hitmanTargetsByPlayer: hitmanTargetsByPlayer };
+}
+
 const cooldownFill = document.querySelector('.card__cooldown-fill');
 
 function resetCooldownState() {
@@ -576,6 +610,7 @@ function startRevealCooldownBar() {
 
 function revealCurrent() {
     const isImposter = game.imposterIndices.indexOf(game.currentPlayer) !== -1;
+    const isHitman = game.hitmanIndices.indexOf(game.currentPlayer) !== -1;
     const playerNumber = game.revealedCardCount + 1;
     game.revealedCardCount = playerNumber;
     game.playerNumbersByIndex[game.currentPlayer] = playerNumber;
@@ -589,8 +624,12 @@ function revealCurrent() {
         .map(function (playerIndex) { return game.playerNumbersByIndex[playerIndex]; });
     const details = ['You are Player ' + playerNumber + '.'].concat(game.mode.getRevealDetails({
         isImposter: isImposter,
+        isHitman: isHitman,
         playerNumber: playerNumber,
         otherImposterNumbers: otherImposterNumbers,
+        hitmanTargetNumber: isHitman
+            ? game.playerNumbersByIndex[game.hitmanTargetsByPlayer[game.currentPlayer]]
+            : null,
     }));
     revealDetailsList.replaceChildren();
     details.forEach(function (detail) {
@@ -706,6 +745,9 @@ roleCard.addEventListener('click', function () {
 });
 
 numPlayersInput.addEventListener('input', clampSetupInputs);
+hitmanCountInput.addEventListener('input', function () {
+    clearSetupError();
+});
 
 Array.from(wordsetSelect.options).forEach(function (option) {
     option.dataset.originalLabel = option.textContent;
@@ -781,6 +823,11 @@ btnStart.addEventListener('click', async function () {
     game.secretWord = pickRandomWord(words);
     game.mode = cfg.mode;
     game.imposterIndices = pickImposterIndices(cfg.numPlayers, cfg.numImposters);
+    const hitmanAssignments = cfg.mode.id === 'hitman'
+        ? pickHitmanAssignments(cfg.numPlayers, cfg.numHitmen)
+        : { hitmanIndices: [], hitmanTargetsByPlayer: {} };
+    game.hitmanIndices = hitmanAssignments.hitmanIndices;
+    game.hitmanTargetsByPlayer = hitmanAssignments.hitmanTargetsByPlayer;
     game.imposterWordsByPlayer = {};
     game.playerNumbersByIndex = {};
     for (let playerIndex = 0; playerIndex < cfg.numPlayers; playerIndex++) {

@@ -6,6 +6,10 @@ The app is plain **HTML**, **CSS**, and a small **JavaScript** module. Word list
 
 Players can open **View / edit words** during setup to rename, add, or remove terms from the selected wordset. These edits are temporary until saved as a custom wordset. Built-in wordsets can be reset to their default words. Saved custom wordsets are stored in the current browser, shown in italics in the selector, and can be deleted from the editor; edits to built-in wordsets never modify the original JSON files.
 
+### Hitman mode
+
+Select **Hitman** in the game mode menu to assign a hitman task to the chosen number of players. The number of Hitmen is capped at one quarter of the total players (rounded down), so Hitman mode requires at least four players. Hitmen are selected randomly from all players, including imposters, and each is assigned a random target other than themselves. Their goal is to get their target voted off as the imposter, whether or not that player is actually an imposter. The target and task are shown only on the hitman's card reveal.
+
 ### Github Pages Link
 https://maristcomputersociety.github.io/cs-themed-imposter/
 
