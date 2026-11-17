@@ -22,6 +22,8 @@ const previousModeButton = document.getElementById('btn-previous-mode');
 const nextModeButton = document.getElementById('btn-next-mode');
 const modeName = document.getElementById('mode-name');
 const modeDescription = document.getElementById('mode-description');
+const revealDetails = document.getElementById('reveal-details');
+const revealDetailsList = document.getElementById('reveal-details-list');
 const setupError = document.getElementById('setup-error');
 const btnStart = document.getElementById('btn-start');
 
@@ -40,25 +42,56 @@ const wordsetLoads = new Map();
 const CUSTOM_WORDSETS_STORAGE_KEY = 'cs-themed-imposter.custom-wordsets';
 const gameModes = [
     {
+        id: 'normal',
         name: 'Normal Mode',
         description: 'Imposters know they are imposters and see their role instead of the secret word.',
         unknownImposter: false,
+        limits: { minPlayers: 2, maxPlayers: 32, minImposters: 1 },
+        getRevealDetails: function () { return []; },
     },
     {
+        id: 'unknown-imposter',
         name: 'Unknown Imposter Mode',
         description: 'Imposters do not know their role; they see a different secret word from the other players.',
         unknownImposter: true,
+        limits: { minPlayers: 2, maxPlayers: 32, minImposters: 1 },
+        getRevealDetails: function () { return []; },
     },
+    {
+        id: 'imposter-hivemind',
+        name: 'Hivemind',
+        description: 'Imposters know who their teammates are. Each player is numbered by card-reveal order, starting at 1.',
+        unknownImposter: false,
+        limits: { minPlayers: 4, maxPlayers: 32, minImposters: 2 },
+        getRevealDetails: function (details) {
+            if (!details.isImposter) return [];
+            return ['Your fellow imposters are Players ' + details.otherImposterNumbers.join(', ') + '.'];
+        },
+    },
+    {
+        id: 'hitman',
+        name: 'Hitman',
+        description: 'A new player type "hitman" is introduced',
+        unknownImposter: false,
+        limits: { minPlayers: 4, maxPlayers: 32, minImposters: 2 },
+        getRevealDetails: function (details) {
+            if (!details.isImposter) return [];
+            return ['Your target is Player ' + details.otherImposterNumbers.join(', ') + '.'];
+        },
+    }
 ];
 let savedCustomWordsets = [];
 let customWordsetStorageError = '';
 let selectedModeIndex = 0;
 
-/** @type {{ secretWord: string, imposterWordsByPlayer: Record<number, string>, imposterIndices: number[], currentPlayer: number, revealed: boolean, roundEndMs: number, timerId: number | null, revealCooldownEndMs: number, tapRevealCooldownEndMs: number }} */
+/** @type {{ secretWord: string, imposterWordsByPlayer: Record<number, string>, imposterIndices: number[], playerNumbersByIndex: Record<number, number>, revealedCardCount: number, mode: (typeof gameModes)[number] | null, currentPlayer: number, revealed: boolean, roundEndMs: number, timerId: number | null, revealCooldownEndMs: number, tapRevealCooldownEndMs: number }} */
 let game = {
     secretWord: '',
     imposterWordsByPlayer: {},
     imposterIndices: [],
+    playerNumbersByIndex: {},
+    revealedCardCount: 0,
+    mode: null,
     currentPlayer: 0,
     revealed: false,
     roundEndMs: 0,
@@ -69,6 +102,10 @@ let game = {
 
 function maxImpostersForPlayers(n) {
     return Math.floor(n / 2);
+}
+
+function maxImpostersForMode(mode, numPlayers) {
+    return Math.min(maxImpostersForPlayers(numPlayers), mode.limits.maxImposters || Infinity);
 }
 
 function shuffle(arr) {
@@ -82,12 +119,21 @@ function shuffle(arr) {
     return a;
 }
 
-function clampImposterInput() {
-    const n = parseInt(numPlayersInput.value, 10) || 2;
-    const maxI = maxImpostersForPlayers(n);
+function clampSetupInputs() {
+    const limits = gameModes[selectedModeIndex].limits;
+    numPlayersInput.min = String(limits.minPlayers);
+    numPlayersInput.max = String(limits.maxPlayers);
+    let n = parseInt(numPlayersInput.value, 10);
+    if (Number.isNaN(n)) n = limits.minPlayers;
+    n = Math.max(limits.minPlayers, Math.min(limits.maxPlayers, n));
+    numPlayersInput.value = String(n);
+
+    const maxI = maxImpostersForMode(gameModes[selectedModeIndex], n);
+    numImpostersInput.min = String(limits.minImposters);
     numImpostersInput.max = String(maxI);
-    let imp = parseInt(numImpostersInput.value, 10) || 1;
-    if (imp < 1) imp = 1;
+    let imp = parseInt(numImpostersInput.value, 10);
+    if (Number.isNaN(imp)) imp = limits.minImposters;
+    if (imp < limits.minImposters) imp = limits.minImposters;
     if (imp > maxI) imp = maxI;
     numImpostersInput.value = String(imp);
 }
@@ -106,14 +152,16 @@ function parseSetup() {
     const n = parseInt(numPlayersInput.value, 10);
     const imp = parseInt(numImpostersInput.value, 10);
     const minutes = parseInt(roundMinutesInput.value, 10);
-    const maxI = maxImpostersForPlayers(n);
+    const mode = gameModes[selectedModeIndex];
+    const limits = mode.limits;
+    const maxI = maxImpostersForMode(mode, n);
 
-    if (Number.isNaN(n) || n < 2 || n > 32) {
-        showSetupError('Players must be between 2 and 32.');
+    if (Number.isNaN(n) || n < limits.minPlayers || n > limits.maxPlayers) {
+        showSetupError('Players must be between ' + limits.minPlayers + ' and ' + limits.maxPlayers + ' for ' + mode.name + '.');
         return null;
     }
-    if (Number.isNaN(imp) || imp < 1 || imp > maxI) {
-        showSetupError(`Imposters must be between 1 and ${maxI} for ${n} players.`);
+    if (Number.isNaN(imp) || imp < limits.minImposters || imp > maxI) {
+        showSetupError('Imposters must be between ' + limits.minImposters + ' and ' + maxI + ' for ' + n + ' players in ' + mode.name + '.');
         return null;
     }
     if (Number.isNaN(minutes) || minutes < 1 || minutes > 10) {
@@ -126,7 +174,7 @@ function parseSetup() {
         numImposters: imp,
         roundMinutes: minutes,
         wordsetId: wordsetSelect.value,
-        unknownImposterMode: gameModes[selectedModeIndex].unknownImposter,
+        mode: mode,
     };
 }
 
@@ -135,6 +183,7 @@ function selectMode(direction) {
     const mode = gameModes[selectedModeIndex];
     modeName.textContent = mode.name;
     modeDescription.textContent = mode.description;
+    clampSetupInputs();
     clearSetupError();
 }
 
@@ -491,10 +540,12 @@ function resetCooldownState() {
 function showCardForCurrentPlayer() {
     const n = parseInt(numPlayersInput.value, 10);
     game.revealed = false;
-    playerLabel.textContent = 'Player ' + (game.currentPlayer + 1) + ' of ' + n;
+    playerLabel.textContent = 'Player ' + game.playerNumbersByIndex[game.currentPlayer] + ' of ' + n;
     cardHint.hidden = false;
     cardSecret.hidden = true;
     cardSecret.textContent = '';
+    revealDetailsList.replaceChildren();
+    revealDetails.hidden = true;
     roleCard.setAttribute('aria-pressed', 'false');
     resetCooldownState();
 }
@@ -525,11 +576,29 @@ function startRevealCooldownBar() {
 
 function revealCurrent() {
     const isImposter = game.imposterIndices.indexOf(game.currentPlayer) !== -1;
+    const playerNumber = game.revealedCardCount + 1;
+    game.revealedCardCount = playerNumber;
+    game.playerNumbersByIndex[game.currentPlayer] = playerNumber;
     cardHint.hidden = true;
     cardSecret.hidden = false;
     cardSecret.textContent = isImposter
         ? game.imposterWordsByPlayer[game.currentPlayer] || game.secretWord
         : game.secretWord;
+    const otherImposterNumbers = game.imposterIndices
+        .filter(function (playerIndex) { return playerIndex !== game.currentPlayer; })
+        .map(function (playerIndex) { return game.playerNumbersByIndex[playerIndex]; });
+    const details = ['You are Player ' + playerNumber + '.'].concat(game.mode.getRevealDetails({
+        isImposter: isImposter,
+        playerNumber: playerNumber,
+        otherImposterNumbers: otherImposterNumbers,
+    }));
+    revealDetailsList.replaceChildren();
+    details.forEach(function (detail) {
+        const item = document.createElement('li');
+        item.textContent = detail;
+        revealDetailsList.appendChild(item);
+    });
+    revealDetails.hidden = details.length === 0;
     game.revealed = true;
     roleCard.setAttribute('aria-pressed', 'true');
     startRevealCooldownBar();
@@ -586,6 +655,9 @@ function resetToSetup() {
     timerDisplay.classList.remove('timer-display--done');
     game.currentPlayer = 0;
     game.revealed = false;
+    game.revealedCardCount = 0;
+    game.playerNumbersByIndex = {};
+    game.mode = null;
 }
 
 function isRevealCooldownActive() {
@@ -633,7 +705,7 @@ roleCard.addEventListener('click', function () {
     advanceOrFinish();
 });
 
-numPlayersInput.addEventListener('input', clampImposterInput);
+numPlayersInput.addEventListener('input', clampSetupInputs);
 
 Array.from(wordsetSelect.options).forEach(function (option) {
     option.dataset.originalLabel = option.textContent;
@@ -707,10 +779,16 @@ btnStart.addEventListener('click', async function () {
     }
 
     game.secretWord = pickRandomWord(words);
+    game.mode = cfg.mode;
     game.imposterIndices = pickImposterIndices(cfg.numPlayers, cfg.numImposters);
     game.imposterWordsByPlayer = {};
+    game.playerNumbersByIndex = {};
+    for (let playerIndex = 0; playerIndex < cfg.numPlayers; playerIndex++) {
+        game.playerNumbersByIndex[playerIndex] = playerIndex + 1;
+    }
+    game.revealedCardCount = 0;
 
-    if (cfg.unknownImposterMode) {
+    if (cfg.mode.unknownImposter) {
         const uniqueImposterWords = pickDistinctImposterWords(words, game.secretWord, cfg.numImposters);
         if (!uniqueImposterWords) {
             showSetupError(
@@ -751,4 +829,4 @@ nextModeButton.addEventListener('click', function () {
     selectMode(1);
 });
 
-clampImposterInput();
+clampSetupInputs();

@@ -17,14 +17,6 @@
                 Everyone except the imposter sees the same secret computer science term. Take turns giving a related clue—without revealing the word too obviously. When time runs out, discuss and vote on who the imposter is. This version is pass-and-play on one device.
             </p>
             <div class="field">
-                <label class="label" for="num-players">Number of players</label>
-                <input class="input input-num" type="number" id="num-players" name="num-players" min="2" max="32" value="4" inputmode="numeric">
-            </div>
-            <div class="field">
-                <label class="label" for="num-imposters">Number of imposters</label>
-                <input class="input input-num" type="number" id="num-imposters" name="num-imposters" min="1" max="16" value="1" inputmode="numeric">
-            </div>
-            <div class="field">
                 <label class="label" for="wordset">Wordset</label>
                 <div class="select-wrap">
                     <select class="input input-select" id="wordset" name="wordset">
@@ -43,6 +35,17 @@
                     </select>
                 </div>
             </div>
+            <section class="mode-picker" aria-label="Game mode">
+                <p class="label mode-picker__label">Game mode</p>
+                <div class="mode-picker__carousel">
+                    <button type="button" class="mode-picker__arrow" id="btn-previous-mode" aria-label="Previous game mode">&larr;</button>
+                    <div class="mode-picker__content" aria-live="polite" aria-atomic="true">
+                        <h2 class="mode-picker__name" id="mode-name">Normal Mode</h2>
+                        <p class="mode-picker__description" id="mode-description">Imposters know they are imposters and see their role instead of the secret word.</p>
+                    </div>
+                    <button type="button" class="mode-picker__arrow" id="btn-next-mode" aria-label="Next game mode">&rarr;</button>
+                </div>
+            </section>
             <section class="word-editor" aria-label="Wordset editor">
                 <button type="button" class="btn btn-secondary" id="btn-edit-words" aria-expanded="false" aria-controls="word-editor-content">Wordset Editor</button>
                 <div id="word-editor-content" hidden>
@@ -60,20 +63,17 @@
                 </div>
             </section>
             <div class="field">
+                <label class="label" for="num-players">Number of players</label>
+                <input class="input input-num" type="number" id="num-players" name="num-players" min="2" max="32" value="4" inputmode="numeric">
+            </div>
+            <div class="field">
+                <label class="label" for="num-imposters">Number of imposters</label>
+                <input class="input input-num" type="number" id="num-imposters" name="num-imposters" min="1" max="16" value="1" inputmode="numeric">
+            </div>
+            <div class="field">
                 <label class="label" for="round-minutes">Round time (minutes)</label>
                 <input class="input input-num" type="number" id="round-minutes" name="round-minutes" min="1" max="10" value="2" inputmode="numeric">
             </div>
-            <section class="mode-picker" aria-label="Game mode">
-                <p class="label mode-picker__label">Game mode</p>
-                <div class="mode-picker__carousel">
-                    <button type="button" class="mode-picker__arrow" id="btn-previous-mode" aria-label="Previous game mode">&larr;</button>
-                    <div class="mode-picker__content" aria-live="polite" aria-atomic="true">
-                        <h2 class="mode-picker__name" id="mode-name">Normal Mode</h2>
-                        <p class="mode-picker__description" id="mode-description">Imposters know they are imposters and see their role instead of the secret word.</p>
-                    </div>
-                    <button type="button" class="mode-picker__arrow" id="btn-next-mode" aria-label="Next game mode">&rarr;</button>
-                </div>
-            </section>
             <p class="error" id="setup-error" role="alert" hidden></p>
             <button type="button" class="btn btn-primary" id="btn-start">Start game</button>
         </main>
@@ -88,6 +88,9 @@
                         <span class="card__cooldown-fill"></span>
                     </span>
                 </button>
+                <div class="reveal-details" id="reveal-details" aria-live="polite" aria-atomic="true" hidden>
+                    <ul class="reveal-details__list" id="reveal-details-list"></ul>
+                </div>
             </div>
             <div id="timer-section" hidden>
                 <p class="timer-label" id="timer-label">Time remaining</p>
