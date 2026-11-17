@@ -7,8 +7,9 @@ const setupScreen = document.getElementById('setup-screen');
 const gameScreen = document.getElementById('game-screen');
 const numPlayersInput = document.getElementById('num-players');
 const numImpostersInput = document.getElementById('num-imposters');
-const hitmanCountField = document.getElementById('hitman-count-field');
-const hitmanCountInput = document.getElementById('num-hitmen');
+const targetTaskCountField = document.getElementById('target-task-count-field');
+const targetTaskCountLabel = document.getElementById('target-task-count-label');
+const targetTaskCountInput = document.getElementById('num-target-tasks');
 const wordsetSelect = document.getElementById('wordset');
 const btnEditWords = document.getElementById('btn-edit-words');
 const wordEditorContent = document.getElementById('word-editor-content');
@@ -45,7 +46,7 @@ const CUSTOM_WORDSETS_STORAGE_KEY = 'cs-themed-imposter.custom-wordsets';
 const gameModes = [
     {
         id: 'normal',
-        name: 'Normal Mode',
+        name: 'Normal',
         description: 'Imposters know they are imposters and see their role instead of the secret word.',
         unknownImposter: false,
         limits: { minPlayers: 2, maxPlayers: 32, minImposters: 1 },
@@ -53,7 +54,7 @@ const gameModes = [
     },
     {
         id: 'unknown-imposter',
-        name: 'Unknown Imposter Mode',
+        name: 'Unknown Imposter',
         description: 'Imposters do not know their role; they see a different secret word from the other players.',
         unknownImposter: true,
         limits: { minPlayers: 2, maxPlayers: 32, minImposters: 1 },
@@ -77,8 +78,19 @@ const gameModes = [
         unknownImposter: false,
         limits: { minPlayers: 4, maxPlayers: 32, minImposters: 1 },
         getRevealDetails: function (details) {
-            if (!details.isHitman) return [];
-            return ['You have the Hitman task. Try to get Player ' + details.hitmanTargetNumber + ' voted off as the imposter.'];
+            if (!details.hasTargetTask) return [];
+            return ['You are a Hitman. Try to get Player ' + details.targetNumber + ' voted off as the imposter.'];
+        },
+    },
+    {
+        id: 'lawyer',
+        name: 'Lawyer',
+        description: 'Lawyers are assigned a player to defend from being voted off as the imposter. Lawyers may be civilians or imposters.',
+        unknownImposter: false,
+        limits: { minPlayers: 4, maxPlayers: 32, minImposters: 1 },
+        getRevealDetails: function (details) {
+            if (!details.hasTargetTask) return [];
+            return ['You are a Lawyer. Defend Player ' + details.targetNumber + ' from being voted off as the imposter, regardless of their innocence.'];
         },
     }
 ];
@@ -86,13 +98,13 @@ let savedCustomWordsets = [];
 let customWordsetStorageError = '';
 let selectedModeIndex = 0;
 
-/** @type {{ secretWord: string, imposterWordsByPlayer: Record<number, string>, imposterIndices: number[], hitmanIndices: number[], hitmanTargetsByPlayer: Record<number, number>, playerNumbersByIndex: Record<number, number>, revealedCardCount: number, mode: (typeof gameModes)[number] | null, currentPlayer: number, revealed: boolean, roundEndMs: number, timerId: number | null, revealCooldownEndMs: number, tapRevealCooldownEndMs: number }} */
+/** @type {{ secretWord: string, imposterWordsByPlayer: Record<number, string>, imposterIndices: number[], targetTaskIndices: number[], targetsByPlayer: Record<number, number>, playerNumbersByIndex: Record<number, number>, revealedCardCount: number, mode: (typeof gameModes)[number] | null, currentPlayer: number, revealed: boolean, roundEndMs: number, timerId: number | null, revealCooldownEndMs: number, tapRevealCooldownEndMs: number }} */
 let game = {
     secretWord: '',
     imposterWordsByPlayer: {},
     imposterIndices: [],
-    hitmanIndices: [],
-    hitmanTargetsByPlayer: {},
+    targetTaskIndices: [],
+    targetsByPlayer: {},
     playerNumbersByIndex: {},
     revealedCardCount: 0,
     mode: null,
@@ -142,14 +154,16 @@ function clampSetupInputs() {
     if (imp > maxI) imp = maxI;
     numImpostersInput.value = String(imp);
 
-    hitmanCountField.hidden = mode.id !== 'hitman';
+    const hasTargetTask = mode.id === 'hitman' || mode.id === 'lawyer';
+    targetTaskCountField.hidden = !hasTargetTask;
+    targetTaskCountLabel.textContent = mode.id === 'lawyer' ? 'Number of Lawyers' : 'Number of Hitmen';
     const maxHitmen = Math.floor(n / 4);
-    hitmanCountInput.min = '1';
-    hitmanCountInput.max = String(maxHitmen);
-    let hitmanCount = parseInt(hitmanCountInput.value, 10);
-    if (Number.isNaN(hitmanCount)) hitmanCount = 1;
-    hitmanCount = Math.max(1, Math.min(maxHitmen, hitmanCount));
-    hitmanCountInput.value = String(hitmanCount);
+    targetTaskCountInput.min = '1';
+    targetTaskCountInput.max = String(maxHitmen);
+    let taskCount = parseInt(targetTaskCountInput.value, 10);
+    if (Number.isNaN(taskCount)) taskCount = 1;
+    taskCount = Math.max(1, Math.min(maxHitmen, taskCount));
+    targetTaskCountInput.value = String(taskCount);
 }
 
 function showSetupError(message) {
@@ -165,7 +179,7 @@ function clearSetupError() {
 function parseSetup() {
     const n = parseInt(numPlayersInput.value, 10);
     const imp = parseInt(numImpostersInput.value, 10);
-    const hitmanCount = parseInt(hitmanCountInput.value, 10);
+    const taskCount = parseInt(targetTaskCountInput.value, 10);
     const minutes = parseInt(roundMinutesInput.value, 10);
     const mode = gameModes[selectedModeIndex];
     const limits = mode.limits;
@@ -180,8 +194,9 @@ function parseSetup() {
         return null;
     }
     const maxHitmen = Math.floor(n / 4);
-    if (mode.id === 'hitman' && (Number.isNaN(hitmanCount) || hitmanCount < 1 || hitmanCount > maxHitmen)) {
-        showSetupError('Number of Hitman must be between 1 and ' + maxHitmen + ' for ' + n + ' players.');
+    const hasTargetTask = mode.id === 'hitman' || mode.id === 'lawyer';
+    if (hasTargetTask && (Number.isNaN(taskCount) || taskCount < 1 || taskCount > maxHitmen)) {
+        showSetupError(targetTaskCountLabel.textContent + ' must be between 1 and ' + maxHitmen + ' for ' + n + ' players.');
         return null;
     }
     if (Number.isNaN(minutes) || minutes < 1 || minutes > 10) {
@@ -192,7 +207,7 @@ function parseSetup() {
     return {
         numPlayers: n,
         numImposters: imp,
-        numHitmen: mode.id === 'hitman' ? hitmanCount : 0,
+        numTargetTasks: hasTargetTask ? taskCount : 0,
         roundMinutes: minutes,
         wordsetId: wordsetSelect.value,
         mode: mode,
@@ -550,17 +565,17 @@ function pickImposterIndices(numPlayers, count) {
     });
 }
 
-function pickHitmanAssignments(numPlayers, count) {
+function pickTargetAssignments(numPlayers, count) {
     const playerIndices = Array.from({ length: numPlayers }, function (_, index) { return index; });
-    const hitmanIndices = shuffle(playerIndices).slice(0, count);
-    const hitmanTargetsByPlayer = {};
-    hitmanIndices.forEach(function (hitmanIndex) {
-        const possibleTargets = playerIndices.filter(function (playerIndex) {
-            return playerIndex !== hitmanIndex;
+    const targetTaskIndices = shuffle(playerIndices).slice(0, count);
+    const targetsByPlayer = {};
+    targetTaskIndices.forEach(function (playerIndex) {
+        const possibleTargets = playerIndices.filter(function (targetIndex) {
+            return targetIndex !== playerIndex;
         });
-        hitmanTargetsByPlayer[hitmanIndex] = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
+        targetsByPlayer[playerIndex] = possibleTargets[Math.floor(Math.random() * possibleTargets.length)];
     });
-    return { hitmanIndices: hitmanIndices, hitmanTargetsByPlayer: hitmanTargetsByPlayer };
+    return { targetTaskIndices: targetTaskIndices, targetsByPlayer: targetsByPlayer };
 }
 
 const cooldownFill = document.querySelector('.card__cooldown-fill');
@@ -610,7 +625,7 @@ function startRevealCooldownBar() {
 
 function revealCurrent() {
     const isImposter = game.imposterIndices.indexOf(game.currentPlayer) !== -1;
-    const isHitman = game.hitmanIndices.indexOf(game.currentPlayer) !== -1;
+    const hasTargetTask = game.targetTaskIndices.indexOf(game.currentPlayer) !== -1;
     const playerNumber = game.revealedCardCount + 1;
     game.revealedCardCount = playerNumber;
     game.playerNumbersByIndex[game.currentPlayer] = playerNumber;
@@ -624,11 +639,11 @@ function revealCurrent() {
         .map(function (playerIndex) { return game.playerNumbersByIndex[playerIndex]; });
     const details = ['You are Player ' + playerNumber + '.'].concat(game.mode.getRevealDetails({
         isImposter: isImposter,
-        isHitman: isHitman,
+        hasTargetTask: hasTargetTask,
         playerNumber: playerNumber,
         otherImposterNumbers: otherImposterNumbers,
-        hitmanTargetNumber: isHitman
-            ? game.playerNumbersByIndex[game.hitmanTargetsByPlayer[game.currentPlayer]]
+        targetNumber: hasTargetTask
+            ? game.playerNumbersByIndex[game.targetsByPlayer[game.currentPlayer]]
             : null,
     }));
     revealDetailsList.replaceChildren();
@@ -745,7 +760,7 @@ roleCard.addEventListener('click', function () {
 });
 
 numPlayersInput.addEventListener('input', clampSetupInputs);
-hitmanCountInput.addEventListener('input', function () {
+targetTaskCountInput.addEventListener('input', function () {
     clearSetupError();
 });
 
@@ -823,11 +838,12 @@ btnStart.addEventListener('click', async function () {
     game.secretWord = pickRandomWord(words);
     game.mode = cfg.mode;
     game.imposterIndices = pickImposterIndices(cfg.numPlayers, cfg.numImposters);
-    const hitmanAssignments = cfg.mode.id === 'hitman'
-        ? pickHitmanAssignments(cfg.numPlayers, cfg.numHitmen)
-        : { hitmanIndices: [], hitmanTargetsByPlayer: {} };
-    game.hitmanIndices = hitmanAssignments.hitmanIndices;
-    game.hitmanTargetsByPlayer = hitmanAssignments.hitmanTargetsByPlayer;
+    const hasTargetTask = cfg.mode.id === 'hitman' || cfg.mode.id === 'lawyer';
+    const targetAssignments = hasTargetTask
+        ? pickTargetAssignments(cfg.numPlayers, cfg.numTargetTasks)
+        : { targetTaskIndices: [], targetsByPlayer: {} };
+    game.targetTaskIndices = targetAssignments.targetTaskIndices;
+    game.targetsByPlayer = targetAssignments.targetsByPlayer;
     game.imposterWordsByPlayer = {};
     game.playerNumbersByIndex = {};
     for (let playerIndex = 0; playerIndex < cfg.numPlayers; playerIndex++) {

@@ -10,6 +10,10 @@ Players can open **View / edit words** during setup to rename, add, or remove te
 
 Select **Hitman** in the game mode menu to assign a hitman task to the chosen number of players. The number of Hitmen is capped at one quarter of the total players (rounded down), so Hitman mode requires at least four players. Hitmen are selected randomly from all players, including imposters, and each is assigned a random target other than themselves. Their goal is to get their target voted off as the imposter, whether or not that player is actually an imposter. The target and task are shown only on the hitman's card reveal.
 
+### Lawyer mode
+
+Select **Lawyer** to assign a lawyer task using the same player count limit and random assignment rules as Hitman mode. Each Lawyer is assigned a different player from themselves and must defend that player from being voted off as the imposter, regardless of whether that player is innocent or guilty. Lawyers may be civilians or imposters.
+
 ### Github Pages Link
 https://maristcomputersociety.github.io/cs-themed-imposter/
 
