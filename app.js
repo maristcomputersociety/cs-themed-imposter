@@ -164,6 +164,18 @@ function clampSetupInputs() {
     if (Number.isNaN(taskCount)) taskCount = 1;
     taskCount = Math.max(1, Math.min(maxHitmen, taskCount));
     targetTaskCountInput.value = String(taskCount);
+    updateNumberStepperButtons();
+}
+
+function updateNumberStepperButtons() {
+    document.querySelectorAll('.number-stepper').forEach(function (button) {
+        const input = document.getElementById(button.dataset.numberInput);
+        const value = input.valueAsNumber;
+        const bound = button.dataset.direction === 'down' ? input.min : input.max;
+        const limit = Number(bound);
+        button.disabled = Number.isFinite(value) && Number.isFinite(limit) &&
+            (button.dataset.direction === 'down' ? value <= limit : value >= limit);
+    });
 }
 
 function showSetupError(message) {
@@ -763,6 +775,21 @@ numPlayersInput.addEventListener('input', clampSetupInputs);
 targetTaskCountInput.addEventListener('input', function () {
     clearSetupError();
 });
+
+setupScreen.addEventListener('click', function (event) {
+    const button = event.target.closest('.number-stepper');
+    if (!button || button.disabled) return;
+
+    const input = document.getElementById(button.dataset.numberInput);
+    if (button.dataset.direction === 'down') {
+        input.stepDown();
+    } else {
+        input.stepUp();
+    }
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+setupScreen.addEventListener('input', updateNumberStepperButtons);
 
 Array.from(wordsetSelect.options).forEach(function (option) {
     option.dataset.originalLabel = option.textContent;

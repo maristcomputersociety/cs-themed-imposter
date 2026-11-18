@@ -178,6 +178,50 @@ body {
 
 .input-num {
     text-align: center;
+    min-width: 0;
+    flex: 1;
+    border-radius: 0.75rem 0 0 0.75rem;
+    appearance: textfield;
+}
+
+.input-num::-webkit-inner-spin-button,
+.input-num::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+}
+
+.number-input {
+    display: flex;
+    width: 100%;
+}
+
+.number-stepper {
+    flex: 0 0 3rem;
+    min-height: 3rem;
+    padding: 0;
+    color: var(--text-color);
+    background-color: var(--dark-color);
+    border: 2px solid var(--primary-color);
+    border-left: 0;
+    font: inherit;
+    font-size: 1.25rem;
+    cursor: pointer;
+}
+
+.number-stepper:last-child {
+    border-radius: 0 0.75rem 0.75rem 0;
+}
+
+.number-stepper:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 3px solid var(--primary-light);
+    outline-offset: 2px;
+}
+
+.number-stepper:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .select-wrap {

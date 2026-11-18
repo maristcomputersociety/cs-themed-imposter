@@ -21,6 +21,7 @@
                 <div class="select-wrap">
                     <select class="input input-select" id="wordset" name="wordset">
                         <!-- <option value="hackathon-special">Hackathon Special</option> -->
+                        <option value="classes">Classes</option>
                         <option value="cs100">CS 100 — Introductory</option>
                         <option value="cs200">CS 200 — Intermediate</option>
                         <option value="cs300">CS 300 — Advanced</option>
@@ -64,19 +65,35 @@
             </section>
             <div class="field">
                 <label class="label" for="num-players">Number of players</label>
-                <input class="input input-num" type="number" id="num-players" name="num-players" min="2" max="32" value="4" inputmode="numeric">
+                <div class="number-input">
+                    <input class="input input-num" type="number" id="num-players" name="num-players" min="2" max="32" value="4" inputmode="numeric">
+                    <button class="number-stepper" type="button" data-number-input="num-players" data-direction="down" aria-label="Decrease number of players">&minus;</button>
+                    <button class="number-stepper" type="button" data-number-input="num-players" data-direction="up" aria-label="Increase number of players">+</button>
+                </div>
             </div>
             <div class="field">
                 <label class="label" for="num-imposters">Number of imposters</label>
-                <input class="input input-num" type="number" id="num-imposters" name="num-imposters" min="1" max="16" value="1" inputmode="numeric">
+                <div class="number-input">
+                    <input class="input input-num" type="number" id="num-imposters" name="num-imposters" min="1" max="16" value="1" inputmode="numeric">
+                    <button class="number-stepper" type="button" data-number-input="num-imposters" data-direction="down" aria-label="Decrease number of imposters">&minus;</button>
+                    <button class="number-stepper" type="button" data-number-input="num-imposters" data-direction="up" aria-label="Increase number of imposters">+</button>
+                </div>
             </div>
             <div class="field" id="target-task-count-field" hidden>
                 <label class="label" id="target-task-count-label" for="num-target-tasks">Number of Hitmen</label>
-                <input class="input input-num" type="number" id="num-target-tasks" name="num-target-tasks" min="1" max="8" value="1" inputmode="numeric">
+                <div class="number-input">
+                    <input class="input input-num" type="number" id="num-target-tasks" name="num-target-tasks" min="1" max="8" value="1" inputmode="numeric">
+                    <button class="number-stepper" type="button" data-number-input="num-target-tasks" data-direction="down" aria-label="Decrease number of Hitmen">&minus;</button>
+                    <button class="number-stepper" type="button" data-number-input="num-target-tasks" data-direction="up" aria-label="Increase number of Hitmen">+</button>
+                </div>
             </div>
             <div class="field">
                 <label class="label" for="round-minutes">Round time (minutes)</label>
-                <input class="input input-num" type="number" id="round-minutes" name="round-minutes" min="1" max="10" value="2" inputmode="numeric">
+                <div class="number-input">
+                    <input class="input input-num" type="number" id="round-minutes" name="round-minutes" min="1" max="10" value="2" inputmode="numeric">
+                    <button class="number-stepper" type="button" data-number-input="round-minutes" data-direction="down" aria-label="Decrease round time">&minus;</button>
+                    <button class="number-stepper" type="button" data-number-input="round-minutes" data-direction="up" aria-label="Increase round time">+</button>
+                </div>
             </div>
             <p class="error" id="setup-error" role="alert" hidden></p>
             <button type="button" class="btn btn-primary" id="btn-start">Start game</button>
